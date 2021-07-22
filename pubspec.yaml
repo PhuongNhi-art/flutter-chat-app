@@ -21,13 +21,17 @@ environment:
   sdk: ">=2.12.0 <3.0.0"
 
 dependencies:
+  adhara_socket_io: ^1.0.1+1
   cupertino_icons: ^1.0.3
+  date_format: ^2.0.2
   emoji_picker: ^0.0.2
+  floor: ^1.1.0
   flutter:
     sdk: flutter
   flutter_svg: ^0.22.0
   fluttertoast: ^8.0.7
   http: ^0.13.3
+  intl: ^0.17.0
   progress_dialog: ^1.2.4
   provider: ^5.0.0
   rxdart: ^0.27.1
@@ -54,6 +58,8 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  floor_generator: any
+  build_runner: any
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -77,7 +83,8 @@ flutter:
   - assets/images/phone.svg
   - assets/images/lock.svg
   - assets/images/parrot.png
-  - assets/images/group.png
+  - assets/images/person.svg
+  - assets/images/groups.svg
 
 
   # An image asset can refer to one or more resolution-specific "variants", see

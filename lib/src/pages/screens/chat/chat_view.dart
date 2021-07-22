@@ -1,26 +1,35 @@
 import 'package:emoji_picker/emoji_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:helloworld/src/config/app_colors.dart';
-import 'package:helloworld/src/pages/models/chat_model.dart';
-import 'package:helloworld/src/pages/models/chat_temp.dart';
+import 'package:helloworld/src/config/constants.dart';
+import 'package:helloworld/src/database/app_database.dart';
 import 'package:helloworld/src/pages/models/message_model.dart';
+
+import 'package:helloworld/src/pages/models/message_model1.dart';
+import 'package:helloworld/src/pages/models/room_model.dart';
 import 'package:helloworld/src/pages/models/user_model.dart';
-import 'package:helloworld/src/pages/screens/chat/chat_viewmodel.dart';
 import 'package:helloworld/src/pages/screens/chat/date_card.dart';
 import 'package:helloworld/src/pages/screens/chat/own_message_card.dart';
 import 'package:helloworld/src/pages/screens/chat/reply_message_card.dart';
 import 'package:helloworld/src/pages/screens/chat/texting_message.card.dart';
 import 'package:helloworld/src/share_preference/user_preference.dart';
-import 'package:provider/provider.dart';
+import 'package:helloworld/src/utils/utils.dart';
+
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 class Chat extends StatefulWidget {
   @override
   _ChatState createState() => _ChatState();
   // final ChatModel chatModel;
-  final ChatTempModel chatModel;
+  final RoomModel roomModel;
   final UserModel userModel;
-  Chat({Key? key, required this.chatModel, required this.userModel})
+  final List<MessageModel> messages;
+  Chat(
+      {Key? key,
+      required this.messages,
+      required this.roomModel,
+      required this.userModel})
       : super(key: key);
 }
 
@@ -34,15 +43,15 @@ class _ChatState extends State<Chat> {
 
   late IO.Socket socket;
   UserPreferences userPref = new UserPreferences();
+  // List<MessageModel1> messages = [];
   List<MessageModel> messages = [];
-
   TextEditingController messageController = TextEditingController();
   ScrollController scrollController = ScrollController();
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
-
+    connect();
     focusNode.addListener(() {
       if (focusNode.hasFocus) {
         setState(() {
@@ -52,90 +61,160 @@ class _ChatState extends State<Chat> {
     });
   }
 
+  List<String> user(List<String> user, String userId) {
+    user.removeWhere((element) => element == userId);
+    return user;
+  }
+
   Future<void> connect() async {
-    // UserPreferences userPref = new UserPreferences();
-    // UserModel userPrefModel = await userPref.getUser();
     print("userPrefModel ${widget.userModel.id}");
     socket = IO.io("http://192.168.1.244:8081", <String, dynamic>{
       "transports": ["websocket"],
       "autoConnect": false,
+      // "query": widget.userModel.toString(),
     });
     socket.connect();
-    socket.emit("signin", widget.userModel.id);
     socket.onConnect((data) {
       print("Connected");
-      socket.on("message", (msg) {
-        print("destination" + msg);
-        setState(() {
-          _texting = false;
-        });
-        setMessage("destination", msg);
-      });
-      socket.on("texting", (msg) {
-        print("texting" + msg);
-        // setState(() {
-        //   _texting = true;
-        // });
-        setMessage("texting", msg);
-
-        setState(() {
-          _texting = msg == "true";
-        });
-      });
+      socket.emit(Constants.SIGNIN, widget.userModel.id);
+      socket.emit(Constants.JOIN_ROOM, widget.roomModel.id);
     });
-    // print(socket.connected);
-  }
+    socket.on(Constants.MESSAGE, (msg) {
+      // print(msg);
+      MessageModel messageModel = MessageModel.fromJson(msg);
+      setState(() {
+        _texting = false;
+        messages.add(messageModel);
+      });
 
-  Future<void> sendTextingMessage(String message, String targetId) async {
-    // UserPreferences userPref = new UserPreferences();
-    // UserModel userPrefModel = await userPref.getUser();
-    print("targetId ${targetId}");
-    String sourceId = widget.userModel.id.toString();
-    print("Source id ${sourceId}");
-    // setMessage("source", message);
-    socket.emit("texting",
-        {"texting": message, "sourceId": sourceId, "targetId": targetId});
-  }
-
-  Future<void> sendMessage(String message, String targetId) async {
-    // UserPreferences userPref = new UserPreferences();
-    // UserModel userPrefModel = await userPref.getUser();
-    print("targetId ${targetId}");
-    String sourceId = widget.userModel.id.toString();
-    print("Source id ${sourceId}");
-    setMessage("source", message);
-    socket.emit("message",
-        {"message": message, "sourceId": sourceId, "targetId": targetId});
-  }
-
-  void setMessage(String type, String message) {
-    setState(() {
-      MessageModel messageModel = MessageModel(
-          message: message, time: DateTime.now().toString(), type: type);
-      // if (messages[messages.length - 1].time.toString() != messageModel.time) {}
-      print(DateTime.now().toString().substring(0, 10));
-      messages.add(messageModel);
+      // messages.add(messageModel);
+      print(messageModel.content.toString());
     });
-    scrollController.animateTo(scrollController.position.maxScrollExtent,
-        duration: Duration(milliseconds: 300), curve: Curves.easeOut);
+    socket.on(Constants.ON_TYPING, (msg) {
+      // print(msg['user']);
+
+      // print(msg['user']);
+
+      if (msg['user'].toString() != widget.userModel.id.toString()) {
+        setState(() {
+          _texting = msg['content'].toString() == 'true' ? true : false;
+        });
+      }
+      // else {
+      //   setState(() {
+      //     _texting = false;
+      //   });
+      // }
+    });
+  }
+
+  Future<void> sendMessage(UserModel userModel, RoomModel roomModel, int type,
+      int eventType, String content) async {
+    socket.emit(Constants.MESSAGE, {
+      "from": userModel.id.toString(),
+      "room": roomModel.id.toString(),
+      "type": type,
+      "eventType": eventType,
+      "content": content
+    });
+  }
+  // Future<void> connect() async {
+  //   // UserPreferences userPref = new UserPreferences();
+  //   // UserModel userPrefModel = await userPref.getUser();
+  //   print("userPrefModel ${widget.userModel.id}");
+  //   socket = IO.io("http://192.168.1.244:8081", <String, dynamic>{
+  //     "transports": ["websocket"],
+  //     "autoConnect": false,
+  //   });
+  //   socket.connect();
+  //   socket.emit("signin", widget.userModel.id);
+  //   socket.onConnect((data) {
+  //     print("Connected");
+  //     socket.on("message", (msg) {
+  //       print("destination" + msg);
+  //       setState(() {
+  //         _texting = false;
+  //       });
+  //       setMessage("destination", msg);
+  //     });
+  //     socket.on("texting", (msg) {
+  //       print("texting" + msg);
+  //       // setState(() {
+  //       //   _texting = true;
+  //       // });
+  //       setMessage("texting", msg);
+
+  //       setState(() {
+  //         _texting = msg == "true";
+  //       });
+  //     });
+  //   });
+  //   // print(socket.connected);
+  // }
+
+  Future<void> sendTextingMessage(
+      String message, UserModel userModel, RoomModel roomModel) async {
+    socket.emit(Constants.ON_TYPING,
+        {"content": message, "room": roomModel.id, "user": userModel.id});
+  }
+
+  // Future<void> sendMessage(String message, List<UserModel> target) async {
+  //   // UserPreferences userPref = new UserPreferences();
+  //   // UserModel userPrefModel = await userPref.getUser();
+  //   target.forEach((element) {
+  //     // print("targetId ${targetId}");
+  //     String sourceId = widget.userModel.id.toString();
+  //     print("Source id ${sourceId}");
+  //     setMessage("source", message);
+  //     socket.emit("message",
+  //         {"message": message, "sourceId": sourceId, "targetId": element.id});
+  //   });
+  // }
+
+  // Future<void> setMessage(String type, String message) async {
+  //   setState(() {
+  //     // MessageModel1 messageModel = MessageModel1(
+  //     //     message: message, time: DateTime.now().toString(), type: type);
+  //     // if (messages[messages.length - 1].time.toString() != messageModel.time) {}
+
+  //     print(DateTime.now().toString().substring(0, 10));
+  //     messages.add(messageModel);
+  //   });
+
+  //   scrollController.animateTo(scrollController.position.maxScrollExtent,
+  //       duration: Duration(milliseconds: 300), curve: Curves.easeOut);
+  // }
+
+  Future<void> saveMessage(String type, message) async {
+    MessageModel1 messageModel =
+        MessageModel1(1, type, message, DateTime.now().toString());
+    print(
+        '${messageModel.id}${messageModel.type}${messageModel.message}${messageModel.time}');
+    final database =
+        await $FloorAppDatabase.databaseBuilder('app_database.db').build();
+
+    final messageDao = database.messageDao;
+    // final person = Person(1, 'Frank');
+
+    await messageDao.insertPerson(messageModel);
+    final result = await messageDao.findMessageById(1);
+    print(result);
   }
 
   @override
   Widget build(BuildContext context) {
+    messages = widget.messages;
     MediaQueryData mediaQueryData = MediaQuery.of(context);
     double screenWidth = mediaQueryData.size.width;
     double screenHeight = mediaQueryData.size.height;
-    // TextEditingController messageController = TextEditingController();
+    // print(user(widget.roomModel.users, widget.userModel.id.toString())[0]
+    //     .toString());
 
-    // final chatViewModel = Provider.of<ChatViewModel>(context);
-    // chatViewModel.connect();
-    connect();
     return Scaffold(
       backgroundColor: colorLightGreen,
       appBar: PreferredSize(
         preferredSize: Size.fromHeight(screenHeight * 0.08),
         child: AppBar(
-          // automaticallyImplyLeading: false,
           actions: <Widget>[
             IconButton(
               color: Colors.white,
@@ -147,10 +226,47 @@ class _ChatState extends State<Chat> {
               onPressed: () {},
               icon: Icon(Icons.call),
             ),
-            IconButton(
-                color: Colors.white,
-                onPressed: () {},
-                icon: Icon(Icons.more_vert)),
+            // IconButton(
+            //     color: Colors.white,
+            //     onPressed: () {},
+            //     icon: Icon(Icons.more_vert)),
+            PopupMenuButton<String>(
+                icon: Icon(
+                  Icons.more_vert,
+                  color: Colors.white,
+                ),
+                padding: EdgeInsets.all(0),
+                onSelected: (value) {
+                  print(value);
+                },
+                itemBuilder: (BuildContext context) {
+                  return [
+                    PopupMenuItem(
+                      child: Text("View Contact"),
+                      value: "View Contact",
+                    ),
+                    PopupMenuItem(
+                      child: Text("Media, links, and docs"),
+                      value: "Media, links, and docs",
+                    ),
+                    PopupMenuItem(
+                      child: Text("Whatsapp Web"),
+                      value: "Whatsapp Web",
+                    ),
+                    PopupMenuItem(
+                      child: Text("Search"),
+                      value: "Search",
+                    ),
+                    PopupMenuItem(
+                      child: Text("Mute Notification"),
+                      value: "Mute Notification",
+                    ),
+                    PopupMenuItem(
+                      child: Text("Wallpaper"),
+                      value: "Wallpaper",
+                    ),
+                  ];
+                }),
           ],
           backgroundColor: colorDarkGreen,
           title: Container(
@@ -160,7 +276,9 @@ class _ChatState extends State<Chat> {
                   radius: (screenWidth < 768)
                       ? screenWidth * 0.05
                       : screenWidth * 0.02,
-                  backgroundImage: AssetImage(widget.chatModel.image),
+                  child: Icon((widget.roomModel.type == 0)
+                      ? Icons.person
+                      : Icons.group),
                 ),
                 SizedBox(
                   width: (screenWidth < 768)
@@ -171,7 +289,7 @@ class _ChatState extends State<Chat> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      widget.chatModel.username,
+                      widget.roomModel.users[0].username.toString(),
                       style: TextStyle(
                           fontSize: (screenWidth < 768)
                               ? screenWidth * 0.045
@@ -179,7 +297,7 @@ class _ChatState extends State<Chat> {
                           color: Colors.white),
                     ),
                     Text(
-                      chatDatas[1].time,
+                      (widget.roomModel.type == 0) ? "3m ago" : "",
                       style: TextStyle(
                           fontSize: (screenWidth < 768)
                               ? screenWidth * 0.045
@@ -211,52 +329,24 @@ class _ChatState extends State<Chat> {
                     itemCount: messages.length,
                     shrinkWrap: true,
                     itemBuilder: (BuildContext context, int index) {
-                      if (messages[index].type == "texting") {
-                        return Container();
-                      } else if (messages[index].type == "source") {
+                      String time = Utils.readDate(messages[index].updatedAt);
+
+                      if (messages[index].from != widget.userModel.id) {
+                        //Reply
                         if (index == 0) {
                           return Column(
                             children: [
-                              DateCard(
-                                  date: messages[index].time.substring(0, 10)),
-                              OwnMessageCard(
-                                messageModel: messages[index],
-                              ),
-                            ],
-                          );
-                        } else if (messages[index].time.substring(0, 10) !=
-                            messages[index - 1].time.substring(0, 10)) {
-                          return Column(
-                            children: [
-                              DateCard(
-                                  date: messages[index].time.substring(0, 10)),
-                              OwnMessageCard(
-                                messageModel: messages[index],
-                              ),
-                            ],
-                          );
-                        } else {
-                          return OwnMessageCard(
-                            messageModel: messages[index],
-                          );
-                        }
-                      } else {
-                        if (index == 0) {
-                          return Column(
-                            children: [
-                              DateCard(
-                                  date: messages[index].time.substring(0, 10)),
+                              DateCard(date: time),
                               ReplyMessageCard(
                                 messageModel: messages[index],
                               ),
                             ],
                           );
-                        } else if (messages[index].time.substring(0, 10) !=
-                            messages[index - 1].time.substring(0, 10)) {
+                        } else if (time !=
+                            Utils.readDate(messages[index - 1].updatedAt)) {
                           return Column(
                             children: [
-                              DateCard(
-                                  date: messages[index].time.substring(0, 10)),
+                              DateCard(date: time),
                               ReplyMessageCard(
                                 messageModel: messages[index],
                               ),
@@ -267,7 +357,93 @@ class _ChatState extends State<Chat> {
                             messageModel: messages[index],
                           );
                         }
+                      } else //own
+                      {
+                        if (index == 0) {
+                          return Column(
+                            children: [
+                              DateCard(date: time),
+                              OwnMessageCard(
+                                messageModel: messages[index],
+                              ),
+                            ],
+                          );
+                        } else if (time !=
+                            Utils.readDate(messages[index - 1].updatedAt)) {
+                          return Column(
+                            children: [
+                              DateCard(date: time),
+                              OwnMessageCard(
+                                messageModel: messages[index],
+                              ),
+                            ],
+                          );
+                        } else {
+                          return OwnMessageCard(
+                            messageModel: messages[index],
+                          );
+                        }
                       }
+                      // return ReplyMessageCard(
+                      //   messageModel: messages[index],
+                      // );
+                      // if (messages[index].type == "texting") {
+                      //   return Container();
+                      // } else if (messages[index].type == "source") {
+                      //   if (index == 0) {
+                      //     return Column(
+                      //       children: [
+                      //         DateCard(
+                      //             date: messages[index].time.substring(0, 10)),
+                      //         OwnMessageCard(
+                      //           messageModel: messages[index],
+                      //         ),
+                      //       ],
+                      //     );
+                      //   } else if (messages[index].time.substring(0, 10) !=
+                      //       messages[index - 1].time.substring(0, 10)) {
+                      //     return Column(
+                      //       children: [
+                      //         DateCard(
+                      //             date: messages[index].time.substring(0, 10)),
+                      //         OwnMessageCard(
+                      //           messageModel: messages[index],
+                      //         ),
+                      //       ],
+                      //     );
+                      //   } else {
+                      //     return OwnMessageCard(
+                      //       messageModel: messages[index],
+                      //     );
+                      //   }
+                      // } else {
+                      //   if (index == 0) {
+                      //     return Column(
+                      //       children: [
+                      //         DateCard(
+                      //             date: messages[index].time.substring(0, 10)),
+                      //         ReplyMessageCard(
+                      //           messageModel: messages[index],
+                      //         ),
+                      //       ],
+                      //     );
+                      //   } else if (messages[index].time.substring(0, 10) !=
+                      //       messages[index - 1].time.substring(0, 10)) {
+                      //     return Column(
+                      //       children: [
+                      //         DateCard(
+                      //             date: messages[index].time.substring(0, 10)),
+                      //         ReplyMessageCard(
+                      //           messageModel: messages[index],
+                      //         ),
+                      //       ],
+                      //     );
+                      //   } else {
+                      //     return ReplyMessageCard(
+                      //       messageModel: messages[index],
+                      //     );
+                      //   }
+                      // }
                     }),
               ),
               Visibility(
@@ -300,14 +476,14 @@ class _ChatState extends State<Chat> {
                               controller: messageController,
                               onChanged: (value) async {
                                 if (value.length > 0) {
-                                  sendTextingMessage(
-                                      "true", widget.chatModel.id);
+                                  sendTextingMessage("true", widget.userModel,
+                                      widget.roomModel);
                                   setState(() {
                                     sendButton = true;
                                   });
                                 } else {
-                                  sendTextingMessage(
-                                      "false", widget.chatModel.id);
+                                  sendTextingMessage("false", widget.userModel,
+                                      widget.roomModel);
                                   setState(() {
                                     sendButton = false;
                                   });
@@ -371,8 +547,19 @@ class _ChatState extends State<Chat> {
                                             .position.maxScrollExtent,
                                         duration: Duration(milliseconds: 300),
                                         curve: Curves.easeOut);
-                                    await sendMessage(messageController.text,
-                                        widget.chatModel.id);
+                                    // widget.roomModel.users
+                                    //     .forEach((element) async {
+                                    // await sendMessage(messageController.text,
+                                    //     widget.roomModel.users);
+                                    // await saveMessage(
+                                    //     "source", messageController.text);
+                                    // });
+                                    await sendMessage(
+                                        widget.userModel,
+                                        widget.roomModel,
+                                        Constants.TYPE_MESSAGE,
+                                        Constants.EVENT_TYPE_MESSAGE,
+                                        messageController.text);
 
                                     messageController.clear();
                                     setState(() {

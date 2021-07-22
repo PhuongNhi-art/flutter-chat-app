@@ -2,18 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:helloworld/src/config/app_colors.dart';
-import 'package:helloworld/src/pages/models/chat_model.dart';
-import 'package:helloworld/src/pages/models/chat_temp.dart';
-import 'package:helloworld/src/pages/screens/home/home_viewmodel.dart';
-import 'package:helloworld/src/pages/screens/home/home_viewmodel.dart';
+import 'package:helloworld/src/pages/models/room_model.dart';
+
 import 'package:helloworld/src/pages/screens/home/recent_chat_app.dart';
-import 'package:provider/provider.dart';
+import 'package:helloworld/src/pages/screens/selectContact/selectcontact_view.dart';
 
 class Home extends StatefulWidget {
   @override
   _HomeState createState() => _HomeState();
-  final List<ChatTempModel> chatModel;
-  Home({Key? key, required this.chatModel}) : super(key: key);
+  final List<RoomModel> roomModel;
+  Home({Key? key, required this.roomModel}) : super(key: key);
 }
 
 class _HomeState extends State<Home> {
@@ -38,6 +36,7 @@ class _HomeState extends State<Home> {
 
     SystemChrome.setPreferredOrientations(
         [DeviceOrientation.portraitDown, DeviceOrientation.portraitUp]);
+
     return DefaultTabController(
       length: 3,
       child: Scaffold(
@@ -49,6 +48,7 @@ class _HomeState extends State<Home> {
                 onPressed: () {
                   setState(() {
                     if (this.cusIcon.icon == Icons.search) {
+                      print(widget.roomModel.length);
                       this.cusIcon = Icon(Icons.cancel);
                       this.cusSearchBar = TextField(
                         textInputAction: TextInputAction.go,
@@ -89,7 +89,7 @@ class _HomeState extends State<Home> {
           children: <Widget>[
             Column(
               children: [
-                RecentChat(chatModel: widget.chatModel),
+                RecentChat(roomModel: widget.roomModel),
               ],
             ),
             // Center(
@@ -105,7 +105,10 @@ class _HomeState extends State<Home> {
           ],
         ),
         floatingActionButton: FloatingActionButton(
-          onPressed: () {},
+          onPressed: () {
+            Navigator.push(context,
+                MaterialPageRoute(builder: (builder) => SelectContact()));
+          },
           child: Text(
             '+',
             textAlign: TextAlign.center,

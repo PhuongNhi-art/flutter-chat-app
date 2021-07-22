@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:helloworld/src/pages/screens/changePassword/changePassword_viewmodel.dart';
 import 'package:helloworld/src/pages/screens/chat/chat_viewmodel.dart';
 import 'package:helloworld/src/pages/screens/forgotPassword/forgotPassword_viewmodel.dart';
+import 'package:helloworld/src/pages/screens/selectContact/selectcontact_view.dart';
+import 'package:helloworld/src/pages/screens/signin/signin_view.dart';
 import 'package:helloworld/src/pages/screens/signin/signin_viewmodel.dart';
 import 'package:helloworld/src/pages/screens/signup/signup_viewmodel.dart';
 import 'package:helloworld/src/pages/screens/welcome/welcome_view.dart';
@@ -31,7 +33,7 @@ class ChatApp extends StatelessWidget {
           theme: ThemeData(
               primarySwatch: Colors.lightGreen,
               visualDensity: VisualDensity.adaptivePlatformDensity),
-          home: Welcome()),
+          home: SignIn()),
     );
   }
 }

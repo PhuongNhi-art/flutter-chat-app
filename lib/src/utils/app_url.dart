@@ -5,4 +5,8 @@ class AppUrl {
   static String forgotpassword = localhost + "/forgotpassword";
   static String changepassword = localhost + "/changepassword";
   static String getAllUsers = localhost + "/allusers";
+  static String findUsername = localhost + "/finduser";
+  static String getRoom = localhost + "/room";
+  static String createRoom = localhost + "/room";
+  static String getMessage = localhost + "/getmessage";
 }

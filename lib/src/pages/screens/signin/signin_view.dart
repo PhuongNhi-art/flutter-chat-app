@@ -193,14 +193,15 @@ class _SignInState extends State<SignIn> {
                                       UserModel userPrefModel =
                                           await userPref.getUser();
                                       if (userPrefModel.id != null) {
-                                        await homeViewModel
-                                            .getUserWithLastMsg();
+                                        await homeViewModel.getRooms();
+                                        // print(
+                                        //     "homeView ${homeViewModel.roomModels[0].name}");
                                         Navigator.push(
                                           context,
                                           MaterialPageRoute(
                                               builder: (context) => Home(
-                                                  chatModel:
-                                                      homeViewModel.usersTemp)),
+                                                  roomModel:
+                                                      homeViewModel.rooms)),
                                         );
                                       }
                                     }
