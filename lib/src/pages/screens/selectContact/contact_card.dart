@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:helloworld/src/pages/models/contact_model.dart';
+import 'package:helloworld/src/pages/models/user_model.dart';
 
 class ContactCard extends StatelessWidget {
-  ContactModel contactModel;
-  ContactCard({Key? key, required this.contactModel}) : super(key: key);
+  UserModel userModel;
+  bool select = false;
+  ContactCard({Key? key, required this.userModel}) : super(key: key);
   @override
   Widget build(BuildContext context) {
     return ListTile(
@@ -20,7 +22,7 @@ class ContactCard extends StatelessWidget {
                 color: Colors.white,
               ),
               backgroundColor: Colors.blueGrey[200]),
-          contactModel.select
+          select
               ? Positioned(
                   bottom: 4,
                   right: 5,
@@ -37,10 +39,10 @@ class ContactCard extends StatelessWidget {
               : Container(),
         ]),
       ),
-      title: Text(contactModel.name,
+      title: Text(userModel.username.toString(),
           style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
       subtitle: Text(
-        contactModel.status,
+        "@" + userModel.email.toString(),
         style: TextStyle(fontSize: 13),
       ),
     );

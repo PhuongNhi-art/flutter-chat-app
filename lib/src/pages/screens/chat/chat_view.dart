@@ -97,20 +97,11 @@ class _ChatState extends State<Chat> {
       print(messageModel.content.toString());
     });
     socket.on(Constants.ON_TYPING, (msg) {
-      // print(msg['user']);
-
-      // print(msg['user']);
-
       if (msg['user'].toString() != widget.userModel.id.toString()) {
         setState(() {
           _texting = msg['content'].toString() == 'true' ? true : false;
         });
       }
-      // else {
-      //   setState(() {
-      //     _texting = false;
-      //   });
-      // }
     });
   }
 
@@ -133,21 +124,21 @@ class _ChatState extends State<Chat> {
         {"content": message, "room": roomModel.id, "user": userModel.id});
   }
 
-  Future<void> saveMessage(String type, message) async {
-    MessageModel1 messageModel =
-        MessageModel1(1, type, message, DateTime.now().toString());
-    print(
-        '${messageModel.id}${messageModel.type}${messageModel.message}${messageModel.time}');
-    final database =
-        await $FloorAppDatabase.databaseBuilder('app_database.db').build();
+  // Future<void> saveMessage(String type, message) async {
+  //   MessageModel1 messageModel =
+  //       MessageModel1(1, type, message, DateTime.now().toString());
+  //   print(
+  //       '${messageModel.id}${messageModel.type}${messageModel.message}${messageModel.time}');
+  //   final database =
+  //       await $FloorAppDatabase.databaseBuilder('app_database.db').build();
 
-    final messageDao = database.messageDao;
-    // final person = Person(1, 'Frank');
+  //   final messageDao = database.messageDao;
+  //   // final person = Person(1, 'Frank');
 
-    await messageDao.insertPerson(messageModel);
-    final result = await messageDao.findMessageById(1);
-    // print(result);
-  }
+  //   await messageDao.insertPerson(messageModel);
+  //   final result = await messageDao.findMessageById(1);
+  //   // print(result);
+  // }
 
   @override
   Widget build(BuildContext context) {

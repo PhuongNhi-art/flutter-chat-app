@@ -3,6 +3,7 @@ import 'dart:async';
 
 import 'package:helloworld/src/config/app_colors.dart';
 import 'package:helloworld/src/pages/models/contact_model.dart';
+import 'package:helloworld/src/pages/models/user_model.dart';
 import 'package:helloworld/src/pages/screens/selectContact/button_card.dart';
 import 'package:helloworld/src/pages/screens/selectContact/contact_card.dart';
 import 'package:helloworld/src/pages/screens/selectContact/create_group.dart';
@@ -10,6 +11,9 @@ import 'package:helloworld/src/pages/screens/selectContact/create_group.dart';
 class SelectContact extends StatefulWidget {
   @override
   _SelectContactState createState() => _SelectContactState();
+
+  final List<UserModel> usersList;
+  SelectContact({Key? key, required this.usersList}) : super(key: key);
 }
 
 class _SelectContactState extends State<SelectContact> {
@@ -36,7 +40,7 @@ class _SelectContactState extends State<SelectContact> {
                   color: Colors.white),
             ),
             Text(
-              "256 contact",
+              widget.usersList.length.toString() + " contact ",
               style: TextStyle(fontSize: 13, color: Colors.white),
             ),
           ],
@@ -82,19 +86,22 @@ class _SelectContactState extends State<SelectContact> {
         ],
       ),
       body: ListView.builder(
-        itemCount: contact.length,
+        itemCount: widget.usersList.length + 2,
         itemBuilder: (context, index) {
           if (index == 0) {
             return InkWell(
                 onTap: () {
-                  Navigator.push(context,
-                      MaterialPageRoute(builder: (builder) => CreateGroup()));
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (builder) =>
+                              CreateGroup(usersList: widget.usersList)));
                 },
                 child: ButtonCard(icon: Icons.group, name: "New group"));
           } else if (index == 1) {
             return ButtonCard(icon: Icons.person, name: "New contact");
           } else
-            return ContactCard(contactModel: contact[index]);
+            return ContactCard(userModel: widget.usersList[index - 2]);
         },
       ),
     );

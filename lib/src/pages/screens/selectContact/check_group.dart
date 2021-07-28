@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:helloworld/src/config/app_colors.dart';
 import 'package:helloworld/src/pages/models/contact_model.dart';
+import 'package:helloworld/src/pages/models/user_model.dart';
 import 'package:helloworld/src/pages/screens/selectContact/button_card.dart';
 import 'package:helloworld/src/pages/screens/selectContact/contact_card.dart';
 
 class CheckGroup extends StatefulWidget {
-  List<ContactModel> groups = [];
+  List<UserModel> groups = [];
   CheckGroup({Key? key, required this.groups}) : super(key: key);
   @override
   _CheckGroupState createState() => _CheckGroupState();
@@ -85,7 +86,7 @@ class _CheckGroupState extends State<CheckGroup> {
               child: ListView.builder(
                   itemCount: widget.groups.length,
                   itemBuilder: (context, index) => ContactCard(
-                        contactModel: widget.groups[index],
+                        userModel: widget.groups[index],
                       )),
             ),
           ],
