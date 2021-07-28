@@ -1,5 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:helloworld/src/config/constants.dart';
+import 'package:helloworld/src/pages/models/message_model.dart';
 import 'package:helloworld/src/pages/models/room_model.dart';
 import 'package:helloworld/src/pages/models/user_model.dart';
 
@@ -7,16 +9,70 @@ import 'package:helloworld/src/pages/screens/chat/chat_view.dart';
 import 'package:helloworld/src/pages/screens/chat/chat_viewmodel.dart';
 import 'package:helloworld/src/pages/screens/home/home_viewmodel.dart';
 import 'package:helloworld/src/share_preference/user_preference.dart';
+import 'package:helloworld/src/utils/utils.dart';
+import 'package:socket_io_client/socket_io_client.dart' as IO;
 
-class RecentChat extends StatelessWidget {
+class RecentChat extends StatefulWidget {
+  @override
+  _RecentChatState createState() => _RecentChatState();
   List<RoomModel> roomModel = [];
-  RecentChat({Key? key, required this.roomModel}) : super(key: key);
+  // late IO.Socket socket;
+  // int haveNewMsg = 0;
+  RecentChat({
+    Key? key,
+    required this.roomModel,
+    // // required this.socket,
+    // required this.haveNewMsg
+  }) : super(key: key);
+}
+
+class _RecentChatState extends State<RecentChat> {
+  List<MessageModel> newMessages = [];
+  // int haveNewMsg = 0;
+  IO.Socket socket = IO.io("http://192.168.1.244:8081", <String, dynamic>{
+    "transports": ["websocket"],
+    "autoConnect": false,
+    // "query": widget.userModel.toString(),
+  });
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    connect();
+  }
+
+  Future<void> connect() async {
+    UserPreferences userPref = new UserPreferences();
+    UserModel userPrefModel = await userPref.getUser();
+    socket.connect();
+    socket.onConnect((data) {
+      print("Connected");
+      socket.emit(Constants.SIGNIN, userPrefModel.id);
+      // socket.emit(Constants.JOIN_ROOM, userPrefModel.id);
+    });
+    socket.on(Constants.NEW_MESSAGE, (msg) {
+      MessageModel message = MessageModel.fromJson(msg);
+      print("listen message ${message.room}");
+      if (!mounted) return;
+      setState(() {
+        widget.roomModel.forEach((element) {
+          if (element.id == message.room) {
+            element.lastMessage = message;
+            element.updatedAt = message.updatedAt;
+            element.unread++;
+          }
+        });
+      });
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    // print("Socket ${socket.toString()}");
     MediaQueryData mediaQueryData = MediaQuery.of(context);
     double screenWidth = mediaQueryData.size.width;
     double screenHeight = mediaQueryData.size.height;
-    HomeViewModel homeViewModel = HomeViewModel();
+
     ChatViewModel chatViewModel = ChatViewModel();
     // homeViewModel.getRooms();
 
@@ -26,19 +82,20 @@ class RecentChat extends StatelessWidget {
           topLeft: Radius.circular(30.0),
           topRight: Radius.circular(30.0),
         ),
-        child: (roomModel.length > 0)
+        child: (widget.roomModel.length > 0)
             ? ListView.builder(
                 padding: const EdgeInsets.all(8),
-                itemCount: roomModel.length,
+                itemCount: widget.roomModel.length,
                 itemBuilder: (BuildContext context, int index) {
-                  final RoomModel room = roomModel[index];
+                  final RoomModel room = widget.roomModel[index];
 
-                  String time = homeViewModel.readTimestamp(room.updatedAt);
+                  // time = homeViewModel.readTimestamp(room.updatedAt);
                   return GestureDetector(
                     onTap: () async {
                       UserPreferences userPref = new UserPreferences();
                       UserModel userPrefModel = await userPref.getUser();
                       await chatViewModel.getMessage(room.id);
+                      // print(userPrefModel.id.toString());
                       await Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -46,6 +103,7 @@ class RecentChat extends StatelessWidget {
                                   messages: chatViewModel.messages,
                                   roomModel: room,
                                   userModel: userPrefModel,
+                                  socket: socket,
                                 )),
                       );
                     },
@@ -105,8 +163,13 @@ class RecentChat extends StatelessWidget {
                                   Container(
                                     width: screenWidth * 0.45,
                                     child: Text(
+                                      // (newMessages.length > 0)
+                                      //     ? newMessages[newMessages.length - 1]
+                                      //         .content
+                                      // :
+                                      // room.lastMessage!.content.toString(),
                                       (room.lastMessage != null)
-                                          ? room.lastMessage
+                                          ? room.lastMessage!.content.toString()
                                           : "",
                                       style: TextStyle(
                                           color: Colors.grey,
@@ -121,7 +184,7 @@ class RecentChat extends StatelessWidget {
                           ),
                           Column(children: [
                             Text(
-                              time,
+                              Utils.readTimestamp(room.updatedAt),
                               style: TextStyle(
                                   color: (room.unread > 0)
                                       ? Colors.green
@@ -136,7 +199,7 @@ class RecentChat extends StatelessWidget {
                                 height: 20,
                                 child: Center(
                                   child: Text(
-                                    '1',
+                                    room.unread.toString(),
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
                                       color: Colors.white,

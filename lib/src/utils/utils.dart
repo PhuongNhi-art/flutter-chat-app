@@ -1,7 +1,7 @@
 import 'package:intl/intl.dart';
 
 class Utils {
-  String readTimestamp(int timestamp) {
+  static String readTimestamp(int timestamp) {
     var now = DateTime.now();
     var format = DateFormat('HH:mm a');
     var date = DateTime.fromMillisecondsSinceEpoch(timestamp);

@@ -2,10 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:helloworld/src/config/app_colors.dart';
+import 'package:helloworld/src/config/constants.dart';
+import 'package:helloworld/src/pages/models/message_model.dart';
 import 'package:helloworld/src/pages/models/room_model.dart';
+import 'package:helloworld/src/pages/models/user_model.dart';
 
 import 'package:helloworld/src/pages/screens/home/recent_chat_app.dart';
 import 'package:helloworld/src/pages/screens/selectContact/selectcontact_view.dart';
+import 'package:helloworld/src/share_preference/user_preference.dart';
+import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 class Home extends StatefulWidget {
   @override
@@ -15,16 +20,43 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
-  // final homeViewModel = new HomeViewModel();
-  // homeViewModel.getUserWithLastMsg();
   Icon cusIcon = Icon(Icons.search);
+  List<MessageModel> newMessages = [];
+  int haveNewMsg = 0;
+  // IO.Socket socket = IO.io("http://192.168.1.244:8081", <String, dynamic>{
+  //   "transports": ["websocket"],
+  //   "autoConnect": false,
+  //   // "query": widget.userModel.toString(),
+  // });
   Widget cusSearchBar = Text('WhatsApp', style: TextStyle(color: Colors.white));
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
-    // final homeViewModel = Provider.of<HomeViewModel>(context);
+    // connect();
   }
+
+  // Future<void> connect() async {
+  //   UserPreferences userPref = new UserPreferences();
+  //   UserModel userPrefModel = await userPref.getUser();
+
+  //   socket.connect();
+  //   socket.onConnect((data) {
+  //     print("Connected");
+  //     socket.emit(Constants.SIGNIN, userPrefModel.id);
+  //     // socket.emit(Constants.JOIN_ROOM, userPrefModel.id);
+  //   });
+  //   socket.on(Constants.MESSAGE, (msg) {
+  //     // print(msg);
+  //     MessageModel message = MessageModel.fromJson(msg);
+  //     print("listen message ${msg}");
+  //     newMessages.add(message);
+  //     haveNewMsg++;
+  //     // print(haveNewMsg.to)
+
+  //     // print("message ${messageModel.content.toString()}");
+  //   });
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -89,7 +121,11 @@ class _HomeState extends State<Home> {
           children: <Widget>[
             Column(
               children: [
-                RecentChat(roomModel: widget.roomModel),
+                RecentChat(
+                  roomModel: widget.roomModel,
+                  // socket: socket,
+                  // haveNewMsg: haveNewMsg,
+                ),
               ],
             ),
             // Center(

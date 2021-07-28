@@ -1,10 +1,11 @@
+import 'package:helloworld/src/pages/models/message_model.dart';
 import 'package:helloworld/src/pages/models/user_model.dart';
 
 class RoomModel {
   String id;
   String name;
   UserModel admin;
-  String lastMessage;
+  MessageModel? lastMessage;
   List<UserModel> users;
   int type;
   int unread;
@@ -32,12 +33,17 @@ class RoomModel {
           .map((data) => UserModel.fromJson(data))
           .toList(),
       name: json['name'],
-      lastMessage: json['lastMessage'],
+      lastMessage: (json['lastMessage'] != null)
+          ? MessageModel.fromJson(json['lastMessage'])
+          : null,
       type: json['type'],
       isActive: json['isActive'],
       unread: json['unread'],
       createdAt: json['createdAt'],
       updatedAt: json['updatedAt'],
     );
+  }
+  set setLastMessage(MessageModel messageModel) {
+    lastMessage = messageModel;
   }
 }

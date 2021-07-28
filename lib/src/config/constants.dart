@@ -11,4 +11,5 @@ class Constants {
   static String CONNECT_USER = "connect user";
   static String ON_TYPING = "on typing";
   static String SIGNIN = "signin";
+  static String NEW_MESSAGE = "new message";
 }

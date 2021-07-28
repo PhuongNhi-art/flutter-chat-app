@@ -24,12 +24,14 @@ class Chat extends StatefulWidget {
   // final ChatModel chatModel;
   final RoomModel roomModel;
   final UserModel userModel;
+  final IO.Socket socket;
   final List<MessageModel> messages;
   Chat(
       {Key? key,
       required this.messages,
       required this.roomModel,
-      required this.userModel})
+      required this.userModel,
+      required this.socket})
       : super(key: key);
 }
 
@@ -41,7 +43,7 @@ class _ChatState extends State<Chat> {
   bool _texting = false;
   // ChatViewModel chatViewModel = new ChatViewModel();
 
-  late IO.Socket socket;
+  // late IO.Socket socket;
   UserPreferences userPref = new UserPreferences();
   // List<MessageModel1> messages = [];
   List<MessageModel> messages = [];
@@ -51,9 +53,10 @@ class _ChatState extends State<Chat> {
   void initState() {
     // TODO: implement initState
     super.initState();
-    connect();
+    connect(widget.socket);
     focusNode.addListener(() {
       if (focusNode.hasFocus) {
+        if (!mounted) return;
         setState(() {
           show = false;
         });
@@ -66,27 +69,30 @@ class _ChatState extends State<Chat> {
     return user;
   }
 
-  Future<void> connect() async {
+  Future<void> connect(IO.Socket socket) async {
     print("userPrefModel ${widget.userModel.id}");
-    socket = IO.io("http://192.168.1.244:8081", <String, dynamic>{
-      "transports": ["websocket"],
-      "autoConnect": false,
-      // "query": widget.userModel.toString(),
-    });
-    socket.connect();
-    socket.onConnect((data) {
-      print("Connected");
-      socket.emit(Constants.SIGNIN, widget.userModel.id);
-      socket.emit(Constants.JOIN_ROOM, widget.roomModel.id);
-    });
+    // socket = IO.io("http://192.168.1.244:8081", <String, dynamic>{
+    //   "transports": ["websocket"],
+    //   "autoConnect": false,
+    //   // "query": widget.userModel.toString(),
+    // });
+    // socket.connect();
+    // socket.onConnect((data) {
+    //   print("Connected");
+    //   // socket.emit(Constants.SIGNIN, widget.userModel.id);
+
+    // });
+    socket.emit(Constants.JOIN_ROOM, widget.roomModel.id);
     socket.on(Constants.MESSAGE, (msg) {
       // print(msg);
       MessageModel messageModel = MessageModel.fromJson(msg);
+      if (!mounted) return;
       setState(() {
         _texting = false;
         messages.add(messageModel);
       });
-
+      scrollController.animateTo(scrollController.position.maxScrollExtent,
+          duration: Duration(milliseconds: 300), curve: Curves.easeOut);
       // messages.add(messageModel);
       print(messageModel.content.toString());
     });
@@ -110,80 +116,22 @@ class _ChatState extends State<Chat> {
 
   Future<void> sendMessage(UserModel userModel, RoomModel roomModel, int type,
       int eventType, String content) async {
-    socket.emit(Constants.MESSAGE, {
+    widget.socket.emit(Constants.MESSAGE, {
       "from": userModel.id.toString(),
       "room": roomModel.id.toString(),
       "type": type,
       "eventType": eventType,
       "content": content
     });
+    scrollController.animateTo(scrollController.position.maxScrollExtent,
+        duration: Duration(milliseconds: 300), curve: Curves.easeOut);
   }
-  // Future<void> connect() async {
-  //   // UserPreferences userPref = new UserPreferences();
-  //   // UserModel userPrefModel = await userPref.getUser();
-  //   print("userPrefModel ${widget.userModel.id}");
-  //   socket = IO.io("http://192.168.1.244:8081", <String, dynamic>{
-  //     "transports": ["websocket"],
-  //     "autoConnect": false,
-  //   });
-  //   socket.connect();
-  //   socket.emit("signin", widget.userModel.id);
-  //   socket.onConnect((data) {
-  //     print("Connected");
-  //     socket.on("message", (msg) {
-  //       print("destination" + msg);
-  //       setState(() {
-  //         _texting = false;
-  //       });
-  //       setMessage("destination", msg);
-  //     });
-  //     socket.on("texting", (msg) {
-  //       print("texting" + msg);
-  //       // setState(() {
-  //       //   _texting = true;
-  //       // });
-  //       setMessage("texting", msg);
-
-  //       setState(() {
-  //         _texting = msg == "true";
-  //       });
-  //     });
-  //   });
-  //   // print(socket.connected);
-  // }
 
   Future<void> sendTextingMessage(
       String message, UserModel userModel, RoomModel roomModel) async {
-    socket.emit(Constants.ON_TYPING,
+    widget.socket.emit(Constants.ON_TYPING,
         {"content": message, "room": roomModel.id, "user": userModel.id});
   }
-
-  // Future<void> sendMessage(String message, List<UserModel> target) async {
-  //   // UserPreferences userPref = new UserPreferences();
-  //   // UserModel userPrefModel = await userPref.getUser();
-  //   target.forEach((element) {
-  //     // print("targetId ${targetId}");
-  //     String sourceId = widget.userModel.id.toString();
-  //     print("Source id ${sourceId}");
-  //     setMessage("source", message);
-  //     socket.emit("message",
-  //         {"message": message, "sourceId": sourceId, "targetId": element.id});
-  //   });
-  // }
-
-  // Future<void> setMessage(String type, String message) async {
-  //   setState(() {
-  //     // MessageModel1 messageModel = MessageModel1(
-  //     //     message: message, time: DateTime.now().toString(), type: type);
-  //     // if (messages[messages.length - 1].time.toString() != messageModel.time) {}
-
-  //     print(DateTime.now().toString().substring(0, 10));
-  //     messages.add(messageModel);
-  //   });
-
-  //   scrollController.animateTo(scrollController.position.maxScrollExtent,
-  //       duration: Duration(milliseconds: 300), curve: Curves.easeOut);
-  // }
 
   Future<void> saveMessage(String type, message) async {
     MessageModel1 messageModel =
@@ -198,7 +146,7 @@ class _ChatState extends State<Chat> {
 
     await messageDao.insertPerson(messageModel);
     final result = await messageDao.findMessageById(1);
-    print(result);
+    // print(result);
   }
 
   @override
@@ -215,6 +163,13 @@ class _ChatState extends State<Chat> {
       appBar: PreferredSize(
         preferredSize: Size.fromHeight(screenHeight * 0.08),
         child: AppBar(
+          leading: BackButton(
+            color: Colors.white,
+            onPressed: () {
+              Navigator.of(context).pop();
+              // this.dispose();
+            },
+          ),
           actions: <Widget>[
             IconButton(
               color: Colors.white,
@@ -226,10 +181,6 @@ class _ChatState extends State<Chat> {
               onPressed: () {},
               icon: Icon(Icons.call),
             ),
-            // IconButton(
-            //     color: Colors.white,
-            //     onPressed: () {},
-            //     icon: Icon(Icons.more_vert)),
             PopupMenuButton<String>(
                 icon: Icon(
                   Icons.more_vert,
@@ -384,66 +335,6 @@ class _ChatState extends State<Chat> {
                           );
                         }
                       }
-                      // return ReplyMessageCard(
-                      //   messageModel: messages[index],
-                      // );
-                      // if (messages[index].type == "texting") {
-                      //   return Container();
-                      // } else if (messages[index].type == "source") {
-                      //   if (index == 0) {
-                      //     return Column(
-                      //       children: [
-                      //         DateCard(
-                      //             date: messages[index].time.substring(0, 10)),
-                      //         OwnMessageCard(
-                      //           messageModel: messages[index],
-                      //         ),
-                      //       ],
-                      //     );
-                      //   } else if (messages[index].time.substring(0, 10) !=
-                      //       messages[index - 1].time.substring(0, 10)) {
-                      //     return Column(
-                      //       children: [
-                      //         DateCard(
-                      //             date: messages[index].time.substring(0, 10)),
-                      //         OwnMessageCard(
-                      //           messageModel: messages[index],
-                      //         ),
-                      //       ],
-                      //     );
-                      //   } else {
-                      //     return OwnMessageCard(
-                      //       messageModel: messages[index],
-                      //     );
-                      //   }
-                      // } else {
-                      //   if (index == 0) {
-                      //     return Column(
-                      //       children: [
-                      //         DateCard(
-                      //             date: messages[index].time.substring(0, 10)),
-                      //         ReplyMessageCard(
-                      //           messageModel: messages[index],
-                      //         ),
-                      //       ],
-                      //     );
-                      //   } else if (messages[index].time.substring(0, 10) !=
-                      //       messages[index - 1].time.substring(0, 10)) {
-                      //     return Column(
-                      //       children: [
-                      //         DateCard(
-                      //             date: messages[index].time.substring(0, 10)),
-                      //         ReplyMessageCard(
-                      //           messageModel: messages[index],
-                      //         ),
-                      //       ],
-                      //     );
-                      //   } else {
-                      //     return ReplyMessageCard(
-                      //       messageModel: messages[index],
-                      //     );
-                      //   }
-                      // }
                     }),
               ),
               Visibility(
@@ -488,7 +379,7 @@ class _ChatState extends State<Chat> {
                                     sendButton = false;
                                   });
                                 }
-                                print(_texting.toString());
+                                // print(_texting.toString());
                               },
                               decoration: InputDecoration(
                                 border: InputBorder.none,

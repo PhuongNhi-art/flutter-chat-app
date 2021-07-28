@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:helloworld/src/config/constants.dart';
+import 'package:helloworld/src/pages/models/message_model.dart';
 import 'package:helloworld/src/pages/models/room_model.dart';
 import 'package:helloworld/src/pages/models/user_model.dart';
 import 'package:helloworld/src/share_preference/user_preference.dart';
@@ -7,12 +9,20 @@ import 'package:helloworld/src/utils/app_url.dart';
 import 'package:date_format/date_format.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 class HomeViewModel {
   List<RoomModel> rooms = [];
   List<RoomModel> roomModels = [];
+  int haveNewMsg = 0;
   UserPreferences userPref = new UserPreferences();
   late UserModel userPrefModel;
+  IO.Socket socket = IO.io("http://192.168.1.244:8081", <String, dynamic>{
+    "transports": ["websocket"],
+    "autoConnect": false,
+    // "query": widget.userModel.toString(),
+  });
+  List<MessageModel> newMessages = [];
   HomeViewModel() {
     // getUserWithLastMsg();
   }
@@ -114,4 +124,25 @@ class HomeViewModel {
   //     return "";
   //   }
   // }
+  Future<void> connect() async {
+    UserPreferences userPref = new UserPreferences();
+    UserModel userPrefModel = await userPref.getUser();
+
+    socket.connect();
+    socket.onConnect((data) {
+      print("Connected");
+      socket.emit(Constants.SIGNIN, userPrefModel.id);
+      // socket.emit(Constants.JOIN_ROOM, userPrefModel.id);
+    });
+    socket.on(Constants.MESSAGE, (msg) {
+      // print(msg);
+      MessageModel message = MessageModel.fromJson(msg);
+      print("listen message ${msg}");
+      newMessages.add(message);
+      haveNewMsg++;
+      print(haveNewMsg.toString());
+
+      // print("message ${messageModel.content.toString()}");
+    });
+  }
 }
